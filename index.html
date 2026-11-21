@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cruzadinha ARQCOMP 90s</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="wallpaper"></div>
+  <main class="desktop">
+    <section class="window" aria-label="Jogo de cruzadinha">
+      <header class="titlebar">
+        <span class="titlebar-dot"></span>
+        <h1>ARQCOMP CRUZADINHA.EXE</h1>
+        <span class="titlebar-clock">S3 MODE</span>
+      </header>
+
+      <div class="window-body">
+        <div class="hud">
+          <p class="subtitle">Tema: arquitetura computacional em estilo computadores anos 90/2000</p>
+          <p id="score" class="score">0 de 16 palavras</p>
+          <div class="actions">
+            <button id="checkBtn" type="button">Conferir</button>
+            <button id="resetBtn" type="button">Reiniciar</button>
+          </div>
+        </div>
+
+        <section class="game-area" aria-label="Area principal do jogo">
+          <div class="board-wrap">
+            <div id="board" class="board" role="grid" aria-label="Tabuleiro da cruzadinha"></div>
+          </div>
+
+          <aside class="clues" aria-label="Pistas da cruzadinha">
+            <article>
+              <h2>Horizontais</h2>
+              <ol id="acrossList"></ol>
+            </article>
+            <article>
+              <h2>Verticais</h2>
+              <ol id="downList"></ol>
+            </article>
+          </aside>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
