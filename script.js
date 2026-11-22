@@ -125,20 +125,48 @@ const resetBtn = document.getElementById("resetBtn");
 
 const cellMap = new Map();
 const inputMap = new Map();
+const wrapperMap = new Map();
+const wordById = new Map();
+
+let typingDirection = "H";
 
 function key(row, col) {
   return `${row}-${col}`;
+}
+
+function updateDirectionLabel() {
+  checkBtn.textContent = typingDirection === "H" ? "Conferir [H]" : "Conferir [V]";
+}
+
+function setTypingDirection(direction) {
+  typingDirection = direction;
+  updateDirectionLabel();
+}
+
+function toggleTypingDirection() {
+  typingDirection = typingDirection === "H" ? "V" : "H";
+  updateDirectionLabel();
+}
+
+function updateScore(hits) {
+  const completed = hits === WORDS.length;
+  score.textContent = completed
+    ? `${hits} de ${WORDS.length} palavras - PARABENS!`
+    : `${hits} de ${WORDS.length} palavras`;
 }
 
 function buildCellMap() {
   WORDS.forEach((entry, index) => {
     entry.id = `w-${index}`;
     entry.cells = [];
+    wordById.set(entry.id, entry);
+
     for (let i = 0; i < entry.word.length; i += 1) {
       const row = entry.dir === "H" ? entry.row : entry.row + i;
       const col = entry.dir === "H" ? entry.col + i : entry.col;
       const letter = entry.word[i];
       const cellKey = key(row, col);
+
       if (!cellMap.has(cellKey)) {
         cellMap.set(cellKey, {
           row,
@@ -150,6 +178,7 @@ function buildCellMap() {
         const cell = cellMap.get(cellKey);
         cell.words.push(entry.id);
       }
+
       entry.cells.push(cellKey);
     }
   });
@@ -157,35 +186,38 @@ function buildCellMap() {
 
 function assignNumbers() {
   const starts = new Map();
+
   WORDS.forEach((entry) => {
-    const start = key(entry.row, entry.col);
-    starts.set(start, { row: entry.row, col: entry.col });
+    starts.set(key(entry.row, entry.col), { row: entry.row, col: entry.col });
   });
 
-  const ordered = [...starts.values()].sort((a, b) => {
+  const orderedStarts = [...starts.values()].sort((a, b) => {
     if (a.row === b.row) {
       return a.col - b.col;
     }
     return a.row - b.row;
   });
 
-  ordered.forEach((start, idx) => {
+  orderedStarts.forEach((start, idx) => {
     const number = idx + 1;
     const startKey = key(start.row, start.col);
+
     WORDS.forEach((entry) => {
       if (entry.row === start.row && entry.col === start.col) {
         entry.number = number;
       }
     });
-    const cell = cellMap.get(startKey);
-    if (cell) {
-      cell.number = number;
+
+    const startCell = cellMap.get(startKey);
+    if (startCell) {
+      startCell.number = number;
     }
   });
 }
 
 function buildBoard() {
   board.style.gridTemplateColumns = `repeat(${COLS}, var(--cell-size))`;
+
   for (let row = 0; row < ROWS; row += 1) {
     for (let col = 0; col < COLS; col += 1) {
       const cellKey = key(row, col);
@@ -220,17 +252,59 @@ function buildBoard() {
       wrapper.appendChild(input);
 
       inputMap.set(cellKey, input);
+      wrapperMap.set(cellKey, wrapper);
       board.appendChild(wrapper);
     }
   }
 }
 
-function moveFocus(row, col) {
-  const next = inputMap.get(key(row, col));
-  if (next) {
-    next.focus();
-    next.select();
+function moveFocusToInput(input) {
+  if (!input) {
+    return;
   }
+  input.focus();
+  input.select();
+}
+
+function moveFocusByVector(row, col, rowDelta, colDelta) {
+  let nextRow = row + rowDelta;
+  let nextCol = col + colDelta;
+
+  while (nextRow >= 0 && nextRow < ROWS && nextCol >= 0 && nextCol < COLS) {
+    const next = inputMap.get(key(nextRow, nextCol));
+    if (next) {
+      moveFocusToInput(next);
+      return;
+    }
+    nextRow += rowDelta;
+    nextCol += colDelta;
+  }
+}
+
+function resolveDirection(cellKey) {
+  const data = cellMap.get(cellKey);
+  if (!data) {
+    return typingDirection;
+  }
+
+  const availableDirections = data.words.map((wordId) => wordById.get(wordId).dir);
+  if (availableDirections.length === 1) {
+    return availableDirections[0];
+  }
+  if (availableDirections.includes(typingDirection)) {
+    return typingDirection;
+  }
+  return availableDirections[0];
+}
+
+function moveFocusAlongDirection(row, col, direction, reverse = false) {
+  const step = reverse ? -1 : 1;
+
+  if (direction === "V") {
+    moveFocusByVector(row, col, step, 0);
+    return;
+  }
+  moveFocusByVector(row, col, 0, step);
 }
 
 function createClueItem(word) {
@@ -249,9 +323,10 @@ function buildClues() {
 }
 
 function clearVisualState() {
-  document.querySelectorAll(".cell").forEach((cell) => {
+  wrapperMap.forEach((cell) => {
     cell.classList.remove("correct", "wrong");
   });
+
   document.querySelectorAll(".clues li").forEach((item) => {
     item.classList.remove("good", "bad");
   });
@@ -272,10 +347,12 @@ function validateBoard() {
 
   WORDS.forEach((word) => {
     word.correct = collectWordValue(word) === word.word;
+
     const clueItem = document.querySelector(`[data-word-id='${word.id}']`);
     if (clueItem) {
       clueItem.classList.add(word.correct ? "good" : "bad");
     }
+
     if (word.correct) {
       hits += 1;
     }
@@ -283,46 +360,61 @@ function validateBoard() {
 
   cellMap.forEach((cell) => {
     const statuses = cell.words.map((wordId) => {
-      const word = WORDS.find((entry) => entry.id === wordId);
-      return word ? word.correct : false;
+      const entry = wordById.get(wordId);
+      return entry ? entry.correct : false;
     });
-    const wrapper = document.querySelector(`.cell[data-key='${key(cell.row, cell.col)}']`);
+
+    const wrapper = wrapperMap.get(key(cell.row, cell.col));
     if (!wrapper) {
       return;
     }
+
     if (statuses.every(Boolean)) {
       wrapper.classList.add("correct");
-    } else if (statuses.some((state) => state === false)) {
+      return;
+    }
+
+    if (statuses.some((state) => state === false)) {
       wrapper.classList.add("wrong");
     }
   });
 
-  score.textContent = `${hits} de ${WORDS.length} palavras`;
+  updateScore(hits);
 }
 
 function resetBoard() {
   inputMap.forEach((input) => {
     input.value = "";
   });
+
   clearVisualState();
-  score.textContent = `0 de ${WORDS.length} palavras`;
-  const first = inputMap.get(key(WORDS[0].row, WORDS[0].col));
-  if (first) {
-    first.focus();
-  }
+  setTypingDirection("H");
+  updateScore(0);
+
+  const firstWord = [...WORDS].sort((a, b) => a.number - b.number)[0];
+  const firstInput = inputMap.get(key(firstWord.row, firstWord.col));
+  moveFocusToInput(firstInput);
 }
 
 function bindInputs() {
   inputMap.forEach((input) => {
+    input.addEventListener("focus", (event) => {
+      const direction = resolveDirection(event.target.dataset.key);
+      setTypingDirection(direction);
+    });
+
     input.addEventListener("input", (event) => {
       const clean = event.target.value.toUpperCase().replace(/[^A-Z]/g, "");
       event.target.value = clean;
+
       if (!clean) {
         return;
       }
+
       const row = Number(event.target.dataset.row);
       const col = Number(event.target.dataset.col);
-      moveFocus(row, col + 1);
+      const direction = resolveDirection(event.target.dataset.key);
+      moveFocusAlongDirection(row, col, direction);
     });
 
     input.addEventListener("keydown", (event) => {
@@ -331,24 +423,39 @@ function bindInputs() {
 
       if (event.key === "Backspace" && !event.target.value) {
         event.preventDefault();
-        moveFocus(row, col - 1);
+        const direction = resolveDirection(event.target.dataset.key);
+        moveFocusAlongDirection(row, col, direction, true);
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        validateBoard();
+      }
+
+      if (event.key === "Tab") {
+        event.preventDefault();
+        toggleTypingDirection();
       }
 
       if (event.key === "ArrowLeft") {
         event.preventDefault();
-        moveFocus(row, col - 1);
+        setTypingDirection("H");
+        moveFocusByVector(row, col, 0, -1);
       }
       if (event.key === "ArrowRight") {
         event.preventDefault();
-        moveFocus(row, col + 1);
+        setTypingDirection("H");
+        moveFocusByVector(row, col, 0, 1);
       }
       if (event.key === "ArrowUp") {
         event.preventDefault();
-        moveFocus(row - 1, col);
+        setTypingDirection("V");
+        moveFocusByVector(row, col, -1, 0);
       }
       if (event.key === "ArrowDown") {
         event.preventDefault();
-        moveFocus(row + 1, col);
+        setTypingDirection("V");
+        moveFocusByVector(row, col, 1, 0);
       }
     });
   });
