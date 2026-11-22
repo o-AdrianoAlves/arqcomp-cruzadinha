@@ -119,6 +119,7 @@ body {
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
@@ -138,6 +139,11 @@ button:active {
   transform: translateY(1px);
 }
 
+button:focus-visible {
+  outline: 2px dashed #0b3f95;
+  outline-offset: 2px;
+}
+
 .game-area {
   display: grid;
   grid-template-columns: minmax(340px, 1fr) 320px;
@@ -147,6 +153,7 @@ button:active {
 
 .board-wrap {
   overflow: auto;
+  max-height: 72vh;
   border: 2px solid;
   border-color: #5f6776 #f3f6ff #f3f6ff #5f6776;
   background: #b9c0cf;
@@ -234,7 +241,7 @@ button:active {
 .clues ol {
   margin: 0;
   padding-left: 1.3rem;
-  max-height: 250px;
+  max-height: 260px;
   overflow: auto;
 }
 
@@ -281,11 +288,15 @@ button:active {
   .subtitle {
     font-size: 1.1rem;
   }
+
+  .clues ol {
+    max-height: 210px;
+  }
 }
 
 @media (max-width: 620px) {
   :root {
-    --cell-size: 1.7rem;
+    --cell-size: 1.55rem;
   }
 
   .window-body {
@@ -298,5 +309,14 @@ button:active {
 
   .score {
     font-size: 1.45rem;
+  }
+
+  .actions button {
+    flex: 1 1 48%;
+  }
+
+  .clues li {
+    font-size: 1.02rem;
+    line-height: 1.08;
   }
 }
