@@ -40,4 +40,4 @@ Jogo de cruzadinha da disciplina de Arquitetura Computacional.
 
 Depois de publicar no GitHub Pages, coloque o link aqui:
 
-`https://SEU-USUARIO.github.io/arqcomp-cruzadinha/`
+`https://o-adrianoalves.github.io/arqcomp-cruzadinha/`
